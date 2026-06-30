@@ -36,8 +36,19 @@ Return this exact shape:
     }
   ],
   "tickets": [
-    {"id": "T-1", "title": "Build file upload component", "type": "Frontend", "storyId": "US-1"},
-    {"id": "T-2", "title": "Implement PDF parsing endpoint", "type": "Backend", "storyId": "US-1"}
+    {"id": "T-1", "title": "Build file upload component", "type": "Frontend", "storyId": "US-1", "moscow": "Must"},
+    {"id": "T-2", "title": "Implement PDF parsing endpoint", "type": "Backend", "storyId": "US-1", "moscow": "Must"}
+  ],
+  "assumptions": [
+    {"id": "A-1", "description": "Team has experience with the recommended tech stack", "category": "Technical"},
+    {"id": "A-2", "description": "Third-party API credentials will be provided before development starts", "category": "Business"},
+    {"id": "A-3", "description": "All in-scope features are covered by the requirements document", "category": "Scope"},
+    {"id": "A-4", "description": "Timeline assumes a standard 40h/week team velocity", "category": "Timeline"}
+  ],
+  "milestones": [
+    {"id": "M-1", "name": "Foundation", "phase": 1, "description": "Core infrastructure, authentication, database schema, and CI/CD pipeline", "ticketIds": ["T-1", "T-2"]},
+    {"id": "M-2", "name": "Core Features", "phase": 2, "description": "Primary user-facing features and main business logic", "ticketIds": ["T-3", "T-4", "T-5"]},
+    {"id": "M-3", "name": "Launch Ready", "phase": 3, "description": "QA hardening, performance tuning, DevOps and production readiness", "ticketIds": ["T-6", "T-7"]}
   ],
   "diagrams": {
     "flowDiagram": "flowchart TD\\n  A[User Uploads File] --> B[Parse Document]\\n  B --> C[AI Analysis]\\n  C --> D[Dashboard]",
@@ -45,10 +56,17 @@ Return this exact shape:
   }
 }
 
-Generate at least 5 user stories, 2-3 tickets per story, 3-6 risks, and 2-4 items per tech stack category. Mermaid syntax must be valid.`;
+Rules:
+- Generate at least 5 user stories, 2-3 tickets per story, 3-6 risks, and 2-4 items per tech stack category.
+- Every ticket must have a "moscow" field: "Must" (core, without it the product fails), "Should" (important but not critical), "Could" (nice-to-have), or "Wont" (out of scope for now).
+- Generate 4-8 assumptions covering Technical, Business, Scope, and Timeline categories.
+- Generate exactly 3 milestones (Phase 1, 2, 3). All ticket IDs must appear in exactly one milestone's ticketIds array.
+- Mermaid syntax must be valid (no special chars in node labels, use quotes for labels with spaces).`;
 
 type RawResult = Omit<AnalysisResult, 'tickets' | 'estimate'> & {
   tickets: Omit<Ticket, 'effortPoints' | 'hours'>[];
+  assumptions: AnalysisResult['assumptions'];
+  milestones: AnalysisResult['milestones'];
 };
 
 export async function analyzeRequirements(text: string): Promise<AnalysisResult> {
@@ -73,11 +91,16 @@ export async function analyzeRequirements(text: string): Promise<AnalysisResult>
     throw new Error(`AI returned invalid JSON. Raw: ${raw.slice(0, 300)}`);
   }
 
-  // Ensure techStack has all keys even if AI omitted some
+  const ts = parsed.techStack ?? {};
   parsed.techStack = {
-    frontend: [], backend: [], database: [], devops: [], thirdParty: [],
-    ...parsed.techStack,
+    frontend:   ts.frontend   ?? [],
+    backend:    ts.backend    ?? [],
+    database:   ts.database   ?? [],
+    devops:     ts.devops     ?? [],
+    thirdParty: ts.thirdParty ?? [],
   };
+  parsed.assumptions = parsed.assumptions ?? [];
+  parsed.milestones = parsed.milestones ?? [];
 
   const { tickets, estimate } = estimateTickets(parsed.tickets ?? []);
   return { ...parsed, tickets, estimate };

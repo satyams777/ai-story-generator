@@ -5,11 +5,12 @@ import { useRef, useState, type DragEvent, type ChangeEvent } from 'react';
 interface Props {
   onSubmit: (formData: FormData) => void;
   loading: boolean;
+  defaultText?: string;
 }
 
-export default function FileUpload({ onSubmit, loading }: Props) {
+export default function FileUpload({ onSubmit, loading, defaultText = '' }: Props) {
   const [file, setFile] = useState<File | null>(null);
-  const [text, setText] = useState('');
+  const [text, setText] = useState(defaultText);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 

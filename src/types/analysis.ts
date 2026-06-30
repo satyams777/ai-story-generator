@@ -1,5 +1,8 @@
 export type Priority = 'High' | 'Medium' | 'Low';
 export type TicketType = 'Frontend' | 'Backend' | 'QA' | 'DevOps';
+export type MoSCoW = 'Must' | 'Should' | 'Could' | 'Wont';
+export type TicketStatus = 'backlog' | 'in_progress' | 'done';
+export type Role = 'owner' | 'stakeholder' | 'developer' | 'pm';
 
 export interface Actor {
   name: string;
@@ -47,6 +50,10 @@ export interface Ticket {
   storyId: string;
   effortPoints: number;
   hours: number;
+  moscow?: MoSCoW;
+  status?: TicketStatus;
+  sprint?: number;
+  milestoneId?: string;
 }
 
 export interface Estimate {
@@ -61,6 +68,20 @@ export interface Estimate {
   };
 }
 
+export interface Assumption {
+  id: string;
+  description: string;
+  category: 'Technical' | 'Business' | 'Scope' | 'Timeline';
+}
+
+export interface Milestone {
+  id: string;
+  name: string;
+  phase: number;
+  description: string;
+  ticketIds: string[];
+}
+
 export interface AnalysisResult {
   summary: string;
   actors: Actor[];
@@ -71,6 +92,8 @@ export interface AnalysisResult {
   userStories: UserStory[];
   tickets: Ticket[];
   estimate: Estimate;
+  assumptions: Assumption[];
+  milestones: Milestone[];
   diagrams: {
     flowDiagram: string;
     architectureDiagram: string;
