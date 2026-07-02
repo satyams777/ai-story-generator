@@ -10,27 +10,36 @@ function toDateStr(date: Date): string {
 }
 
 function sanitize(str: string): string {
-  return str.replace(/[^a-zA-Z0-9 ]/g, '').slice(0, 45);
+  return str.replace(/[^a-zA-Z0-9 ()/-]/g, '').slice(0, 40);
+}
+
+interface StoryMeta {
+  points: number;
+  hours: number;
+  critical: boolean;
 }
 
 function buildGantt(userStories: UserStory[], tickets: Ticket[], hoursPerPoint: number): string {
   const today = new Date();
-  const storyPoints = new Map<string, number>();
+  const storyMeta = new Map<string, StoryMeta>();
 
   for (const story of userStories) {
-    const pts = tickets
-      .filter((t) => t.storyId === story.id)
-      .reduce((sum, t) => sum + t.effortPoints, 0);
-    storyPoints.set(story.id, pts);
+    const storyTickets = tickets.filter((t) => t.storyId === story.id);
+    const points = storyTickets.reduce((sum, t) => sum + t.effortPoints, 0);
+    storyMeta.set(story.id, {
+      points,
+      hours: points * hoursPerPoint,
+      critical: storyTickets.some((t) => t.moscow === 'Must'),
+    });
   }
 
-  // Group stories into sprints
+  // Group stories into sprints by point capacity
   const sprints: UserStory[][] = [];
   let current: UserStory[] = [];
   let currentPts = 0;
 
   for (const story of userStories) {
-    const pts = storyPoints.get(story.id) ?? 0;
+    const pts = storyMeta.get(story.id)?.points ?? 0;
     if (currentPts + pts > SPRINT_CAPACITY_PTS && current.length > 0) {
       sprints.push(current);
       current = [];
@@ -41,22 +50,33 @@ function buildGantt(userStories: UserStory[], tickets: Ticket[], hoursPerPoint: 
   }
   if (current.length > 0) sprints.push(current);
 
-  let gantt = 'gantt\n  title Project Sprint Timeline\n  dateFormat YYYY-MM-DD\n  excludes weekends\n';
+  let gantt = 'gantt\n  title Project Sprint Timeline\n  dateFormat YYYY-MM-DD\n  excludes weekends\n  todayMarker off\n';
 
-  let cursor = new Date(today);
+  let sprintStart = new Date(today);
 
   sprints.forEach((stories, i) => {
-    gantt += `  section Sprint ${i + 1}\n`;
-    for (const story of stories) {
-      const pts = storyPoints.get(story.id) ?? 1;
-      const hours = pts * hoursPerPoint;
-      const days = Math.max(1, Math.ceil(hours / 8));
-      gantt += `    ${sanitize(story.goal)}  :${toDateStr(cursor)}, ${days}d\n`;
-      cursor = new Date(cursor);
-      cursor.setDate(cursor.getDate() + days);
-    }
-    // Sprint gap (2 days for planning)
-    cursor.setDate(cursor.getDate() + 2);
+    const sprintPts = stories.reduce((sum, story) => sum + (storyMeta.get(story.id)?.points ?? 0), 0);
+    gantt += `  section Sprint ${i + 1} (${sprintPts} pts)\n`;
+
+    // Stories in a sprint run as parallel workstreams within the same timebox,
+    // not chained end-to-end — matches how a real sprint is actually delivered.
+    let sprintDays = 1;
+    stories.forEach((story, idx) => {
+      const meta = storyMeta.get(story.id) ?? { points: 1, hours: hoursPerPoint, critical: false };
+      const days = Math.max(1, Math.ceil(meta.hours / 8));
+      const tag = meta.critical ? 'crit, ' : '';
+      const label = `${story.id} - ${sanitize(story.goal)} (${meta.hours}h)`;
+      gantt += `    ${label} :${tag}s${i}_${idx}, ${toDateStr(sprintStart)}, ${days}d\n`;
+      sprintDays = Math.max(sprintDays, days);
+    });
+
+    const sprintEnd = new Date(sprintStart);
+    sprintEnd.setDate(sprintEnd.getDate() + sprintDays);
+    gantt += `    Sprint ${i + 1} Review :milestone, m${i}, ${toDateStr(sprintEnd)}, 0d\n`;
+
+    // 2-day buffer for planning/retro before the next sprint starts
+    sprintStart = new Date(sprintEnd);
+    sprintStart.setDate(sprintStart.getDate() + 2);
   });
 
   return gantt;
@@ -71,5 +91,13 @@ interface Props {
 export default function GanttChart({ userStories, tickets, hoursPerPoint }: Props) {
   if (userStories.length === 0) return null;
   const chart = buildGantt(userStories, tickets, hoursPerPoint);
-  return <MermaidDiagram chart={chart} title="Sprint Timeline (auto-generated from estimates)" />;
+  return (
+    <MermaidDiagram
+      chart={chart}
+      title="Sprint Timeline"
+      caption="Auto-generated from live estimates"
+      icon="📅"
+      accent="blue"
+    />
+  );
 }

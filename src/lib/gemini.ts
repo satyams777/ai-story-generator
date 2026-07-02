@@ -36,8 +36,8 @@ Return this exact shape:
     }
   ],
   "tickets": [
-    {"id": "T-1", "title": "Build file upload component", "type": "Frontend", "storyId": "US-1", "moscow": "Must"},
-    {"id": "T-2", "title": "Implement PDF parsing endpoint", "type": "Backend", "storyId": "US-1", "moscow": "Must"}
+    {"id": "T-1", "title": "Build file upload component", "description": "1-3 sentences on scope, approach and edge cases to handle", "checklist": ["Specific implementation step 1 for this ticket", "Specific implementation step 2", "Specific implementation step 3"], "type": "Frontend", "storyId": "US-1", "moscow": "Must"},
+    {"id": "T-2", "title": "Implement PDF parsing endpoint", "description": "1-3 sentences on scope, approach and edge cases to handle", "checklist": ["Specific implementation step 1 for this ticket", "Specific implementation step 2", "Specific implementation step 3"], "type": "Backend", "storyId": "US-1", "moscow": "Must"}
   ],
   "assumptions": [
     {"id": "A-1", "description": "Team has experience with the recommended tech stack", "category": "Technical"},
@@ -52,16 +52,27 @@ Return this exact shape:
   ],
   "diagrams": {
     "flowDiagram": "flowchart TD\\n  A[User Uploads File] --> B[Parse Document]\\n  B --> C[AI Analysis]\\n  C --> D[Dashboard]",
-    "architectureDiagram": "graph LR\\n  Client[Next.js] --> API[Node API]\\n  API --> AI[Groq AI]\\n  API --> Parser[File Parser]"
+    "architectureDiagram": "graph LR\\n  Client[Next.js] --> API[Node API]\\n  API --> AI[Groq AI]\\n  API --> Parser[File Parser]",
+    "sequenceDiagram": "sequenceDiagram\\n  actor User\\n  participant UI\\n  participant API\\n  participant DB\\n  User->>UI: Submit request\\n  UI->>API: POST /resource\\n  API->>DB: Persist\\n  DB-->>API: OK\\n  API-->>UI: 201 Created\\n  UI-->>User: Confirmation",
+    "erDiagram": "erDiagram\\n  USER ||--o{ ORDER : places\\n  ORDER ||--|{ LINE_ITEM : contains\\n  USER {\\n    int id PK\\n    string email\\n  }\\n  ORDER {\\n    int id PK\\n    int userId FK\\n  }",
+    "stateDiagram": "stateDiagram-v2\\n  [*] --> Draft\\n  Draft --> Submitted: submit\\n  Submitted --> Approved: approve\\n  Submitted --> Rejected: reject\\n  Approved --> [*]"
   }
 }
 
 Rules:
 - Generate at least 5 user stories, 2-3 tickets per story, 3-6 risks, and 2-4 items per tech stack category.
 - Every ticket must have a "moscow" field: "Must" (core, without it the product fails), "Should" (important but not critical), "Could" (nice-to-have), or "Wont" (out of scope for now).
+- Every ticket must have a "description": 1-3 sentences covering scope, technical approach, and any edge cases.
+- Every ticket must have a "checklist": 3-5 concrete implementation steps specific to THAT ticket (not generic advice).
 - Generate 4-8 assumptions covering Technical, Business, Scope, and Timeline categories.
 - Generate exactly 3 milestones (Phase 1, 2, 3). All ticket IDs must appear in exactly one milestone's ticketIds array.
-- Mermaid syntax must be valid (no special chars in node labels, use quotes for labels with spaces).`;
+- Generate ALL FIVE diagrams, each tailored to THIS project's domain (not the generic examples above):
+  - flowDiagram: the primary end-to-end user/business process ("flowchart TD").
+  - architectureDiagram: the system components and how they connect ("graph LR").
+  - sequenceDiagram: the most important runtime interaction between actors/services ("sequenceDiagram").
+  - erDiagram: the core data model with 3-6 entities, keys (PK/FK) and relationships ("erDiagram").
+  - stateDiagram: the lifecycle of the central domain entity ("stateDiagram-v2").
+- Mermaid syntax must be valid: no special chars in node labels, wrap labels containing spaces in quotes, and keep each diagram to a readable size (roughly 6-14 nodes/steps).`;
 
 type RawResult = Omit<AnalysisResult, 'tickets' | 'estimate'> & {
   tickets: Omit<Ticket, 'effortPoints' | 'hours'>[];

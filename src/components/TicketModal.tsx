@@ -10,22 +10,17 @@ const TYPE_STYLES: Record<TicketType, { badge: string; bar: string; label: strin
   DevOps:   { badge: 'bg-orange-100 text-orange-700', bar: 'bg-orange-500', label: 'DevOps' },
 };
 
-const IMPL_HINTS: Record<TicketType, string[]> = {
-  Frontend: ['Create responsive UI component with Tailwind CSS', 'Handle loading and error states', 'Write unit tests with React Testing Library'],
-  Backend:  ['Define API contract (request/response schema)', 'Add input validation and error handling', 'Write integration tests against the endpoint'],
-  QA:       ['Write test cases covering happy path and edge cases', 'Set up test data fixtures', 'Automate with Playwright or Cypress'],
-  DevOps:   ['Update CI/CD pipeline configuration', 'Document environment variables and secrets required', 'Verify rollback strategy'],
-};
-
 interface Props {
   ticket: Ticket;
   story: UserStory | undefined;
+  canEdit?: boolean;
+  onEdit?: () => void;
   onClose: () => void;
 }
 
-export default function TicketModal({ ticket, story, onClose }: Props) {
+export default function TicketModal({ ticket, story, canEdit, onEdit, onClose }: Props) {
   const style = TYPE_STYLES[ticket.type];
-  const hints = IMPL_HINTS[ticket.type];
+  const checklist = ticket.checklist ?? [];
 
   // Close on Escape
   useEffect(() => {
@@ -73,18 +68,35 @@ export default function TicketModal({ ticket, story, onClose }: Props) {
             <Meta label="Estimated Hours" value={`${ticket.hours}h`} />
           </div>
 
-          {/* Implementation hints */}
+          {/* Description */}
+          <Section title="Description">
+            {ticket.description?.trim() ? (
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{ticket.description}</p>
+            ) : (
+              <p className="text-sm text-gray-400 italic">
+                {canEdit ? 'No description yet — click Edit Ticket to add one.' : 'No description added.'}
+              </p>
+            )}
+          </Section>
+
+          {/* Implementation checklist */}
           <Section title="Implementation Checklist">
-            <ul className="space-y-2">
-              {hints.map((hint, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                  <span className="mt-0.5 shrink-0 w-4 h-4 rounded border border-gray-300 flex items-center justify-center text-xs text-gray-400">
-                    {i + 1}
-                  </span>
-                  {hint}
-                </li>
-              ))}
-            </ul>
+            {checklist.length > 0 ? (
+              <ul className="space-y-2">
+                {checklist.map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                    <span className="mt-0.5 shrink-0 w-4 h-4 rounded border border-gray-300 flex items-center justify-center text-xs text-gray-400">
+                      {i + 1}
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-400 italic">
+                {canEdit ? 'No checklist yet — click Edit Ticket to add steps.' : 'No checklist added.'}
+              </p>
+            )}
           </Section>
 
           {/* Linked user story */}
@@ -121,13 +133,21 @@ export default function TicketModal({ ticket, story, onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
           <button
             onClick={onClose}
             className="px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm font-medium text-gray-700 transition-colors"
           >
             Close
           </button>
+          {canEdit && onEdit && (
+            <button
+              onClick={onEdit}
+              className="px-5 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-sm font-semibold text-white transition-colors"
+            >
+              Edit Ticket
+            </button>
+          )}
         </div>
       </div>
     </div>

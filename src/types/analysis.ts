@@ -46,6 +46,8 @@ export interface UserStory {
 export interface Ticket {
   id: string;
   title: string;
+  description?: string;
+  checklist?: string[];
   type: TicketType;
   storyId: string;
   effortPoints: number;
@@ -97,6 +99,9 @@ export interface AnalysisResult {
   diagrams: {
     flowDiagram: string;
     architectureDiagram: string;
+    sequenceDiagram?: string;
+    erDiagram?: string;
+    stateDiagram?: string;
   };
 }
 
