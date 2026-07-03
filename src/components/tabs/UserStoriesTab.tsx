@@ -21,7 +21,7 @@ export default function UserStoriesTab({ stories }: Props) {
   return (
     <div className="space-y-4">
       {stories.map((story) => (
-        <div key={story.id} className="rounded-xl bg-white border border-gray-200">
+        <div key={story.id} className="rounded-2xl bg-white border border-gray-100 shadow-card">
           <button
             onClick={() => toggle(story.id)}
             className="w-full text-left px-6 py-4 flex items-start justify-between gap-4"

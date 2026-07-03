@@ -142,7 +142,7 @@ export default function SprintTab({ tickets, milestones, timelineWeeks }: Props)
           pct={mustCount > 0 ? Math.round((mustDone / mustCount) * 100) : 100}
           color="bg-red-500"
         />
-        <div className="rounded-xl bg-white border border-gray-200 p-4 flex flex-col justify-between">
+        <div className="rounded-2xl bg-white border border-gray-100 shadow-card p-4 flex flex-col justify-between">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Status Breakdown</p>
           <div className="mt-2 space-y-1.5">
             {STATUS_ORDER.map((s) => {
@@ -385,7 +385,7 @@ export default function SprintTab({ tickets, milestones, timelineWeeks }: Props)
       </div>
 
       {/* ── Type + MoSCoW legend ── */}
-      <div className="rounded-xl bg-white border border-gray-200 p-4">
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-card p-4">
         <div className="flex flex-wrap gap-x-8 gap-y-3">
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ticket Type</p>
@@ -428,7 +428,7 @@ export default function SprintTab({ tickets, milestones, timelineWeeks }: Props)
 
 function ProgressCard({ label, value, sub, pct, color }: { label: string; value: string; sub: string; pct: number; color: string }) {
   return (
-    <div className="rounded-xl bg-white border border-gray-200 p-4">
+    <div className="rounded-2xl bg-white border border-gray-100 shadow-card p-4">
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</p>
       <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
       <p className="text-xs text-gray-400 mt-0.5 mb-3">{sub}</p>

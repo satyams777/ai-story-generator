@@ -6,6 +6,37 @@
   body {
     @apply bg-gray-50 text-gray-900 antialiased;
   }
+
+  ::selection {
+    @apply bg-brand-200/70 text-brand-900;
+  }
+
+  * {
+    scrollbar-color: theme('colors.gray.300') transparent;
+    scrollbar-width: thin;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-1.5 h-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+}
+
+@layer utilities {
+  .bg-grid-fade {
+    background-image: radial-gradient(circle, rgb(15 23 42 / 0.08) 1px, transparent 1px);
+    background-size: 22px 22px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+  }
 }
 
 @media print {

@@ -153,7 +153,7 @@ export default function RefinementTab({ result, projectId, onSectionUpdate }: Pr
       </div>
 
       {/* Section picker */}
-      <div className="rounded-xl bg-white border border-gray-200 p-5 space-y-4">
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-card p-5 space-y-4">
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">1. Choose section to refine</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -263,7 +263,7 @@ export default function RefinementTab({ result, projectId, onSectionUpdate }: Pr
 
       {/* History */}
       {history.length > 0 && (
-        <div className="rounded-xl bg-white border border-gray-200 p-5">
+        <div className="rounded-2xl bg-white border border-gray-100 shadow-card p-5">
           <h3 className="font-semibold text-gray-900 mb-3">Refinement History</h3>
           <div className="space-y-2">
             {history.map((entry, i) => {

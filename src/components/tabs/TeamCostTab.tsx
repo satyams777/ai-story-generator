@@ -82,7 +82,7 @@ export default function TeamCostTab({ estimate }: Props) {
       </div>
 
       {/* Role config */}
-      <div className="rounded-xl bg-white border border-gray-200 p-6">
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-card p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Team Composition</h2>
@@ -171,7 +171,7 @@ export default function TeamCostTab({ estimate }: Props) {
       </div>
 
       {/* Budget tiers */}
-      <div className="rounded-xl bg-white border border-gray-200 p-6">
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-card p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Budget Scenarios</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {budgetTiers.map((tier) => (
@@ -188,7 +188,7 @@ export default function TeamCostTab({ estimate }: Props) {
       </div>
 
       {/* Effort breakdown visual */}
-      <div className="rounded-xl bg-white border border-gray-200 p-6">
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-card p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h2>
         <div className="space-y-3">
           {[...breakdown, { label: 'Product Manager', icon: '📋', cost: pmCost, color: '#0d9488' }, { label: 'UI/UX Designer', icon: '🎨', cost: designerCost, color: '#db2777' }].map((b) => (
@@ -216,7 +216,7 @@ export default function TeamCostTab({ estimate }: Props) {
 
 function StatCard({ icon, label, value, sub, color }: { icon: string; label: string; value: string; sub: string; color: string }) {
   return (
-    <div className="rounded-xl bg-white border border-gray-200 p-5 text-center">
+    <div className="rounded-2xl bg-white border border-gray-100 shadow-card p-5 text-center">
       <div className="text-2xl mb-1">{icon}</div>
       <p className="text-xs text-gray-500 font-medium">{label}</p>
       <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>

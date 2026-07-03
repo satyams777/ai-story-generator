@@ -157,15 +157,15 @@ export default function Dashboard({ result, onReset, onResultUpdate, projectId, 
       {/* Brand + My projects */}
       <div className="px-4 py-4 border-b border-gray-100">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-lg">🧠</span>
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-sm shadow-soft">🧠</span>
           <span className="text-sm font-semibold text-gray-900">Project Analysis</span>
         </div>
         {publicView ? (
-          <p className="text-xs text-gray-400">🔒 Shared read-only view</p>
+          <p className="text-xs text-gray-400 flex items-center gap-1.5">🔒 Shared read-only view</p>
         ) : (
           <button
             onClick={onReset}
-            className="w-full text-left text-sm text-gray-500 hover:text-gray-800 transition-colors flex items-center gap-1.5"
+            className="w-full text-left text-sm text-gray-500 hover:text-brand-700 hover:bg-brand-50/60 -mx-1 px-1 py-1 rounded-md transition-colors flex items-center gap-1.5"
           >
             ← My Projects
           </button>
@@ -187,12 +187,13 @@ export default function Dashboard({ result, onReset, onResultUpdate, projectId, 
                     <button
                       key={tab.id}
                       onClick={() => selectTab(tab.id)}
-                      className={`w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      className={`relative w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                         active
                           ? 'bg-brand-50 text-brand-700'
                           : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                       }`}
                     >
+                      {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-brand-600" />}
                       <span className="w-5 text-center">{tab.icon}</span>
                       <span className="flex-1 text-left">{tab.label}</span>
                       {tab.badge && (
@@ -219,7 +220,7 @@ export default function Dashboard({ result, onReset, onResultUpdate, projectId, 
         {isOwner && projectId && (
           <button
             onClick={() => setShowShareModal(true)}
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center gap-1.5"
           >
             <span>👥</span>
             <span>Share Project</span>
@@ -229,7 +230,7 @@ export default function Dashboard({ result, onReset, onResultUpdate, projectId, 
         {isOwner && projectId && (
           <button
             onClick={() => setShowJiraModal(true)}
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center gap-1.5"
           >
             <span>🔗</span>
             <span>{jiraTarget ? `Jira: ${jiraTarget.jiraProjectKey}` : 'Connect Jira'}</span>
@@ -240,7 +241,7 @@ export default function Dashboard({ result, onReset, onResultUpdate, projectId, 
           <button
             onClick={handleSave}
             disabled={saveStatus === 'saving'}
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5"
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 hover:border-gray-300 disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5"
           >
             <span>{saveStatus === 'saved' ? '✅' : '💾'}</span>
             <span>
@@ -251,7 +252,7 @@ export default function Dashboard({ result, onReset, onResultUpdate, projectId, 
 
         <button
           onClick={handleExport}
-          className="w-full px-3 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors flex items-center justify-center gap-1.5"
+          className="w-full px-3 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-all shadow-glow hover:shadow-none flex items-center justify-center gap-1.5"
         >
           <span>📄</span>
           <span>Export Report</span>
@@ -272,7 +273,7 @@ export default function Dashboard({ result, onReset, onResultUpdate, projectId, 
   return (
     <div className="min-h-screen bg-gray-50 lg:flex">
       {/* Desktop sidebar */}
-      <aside className="no-print hidden lg:flex lg:flex-col w-60 shrink-0 border-r border-gray-200 bg-white h-screen sticky top-0">
+      <aside className="no-print hidden lg:flex lg:flex-col w-60 shrink-0 border-r border-gray-200 bg-white h-screen sticky top-0 shadow-[1px_0_0_0_rgba(15,23,42,0.02)]">
         {sidebar}
       </aside>
 
@@ -286,7 +287,7 @@ export default function Dashboard({ result, onReset, onResultUpdate, projectId, 
 
       <div className="flex-1 min-w-0">
         {/* Mobile top bar */}
-        <header className="no-print lg:hidden bg-white border-b border-gray-200 sticky top-0 z-20 flex items-center gap-3 px-4 py-3">
+        <header className="no-print lg:hidden bg-white/90 backdrop-blur-md border-b border-gray-200 sticky top-0 z-20 flex items-center gap-3 px-4 py-3">
           <button
             onClick={() => setMobileNav(true)}
             aria-label="Open menu"
@@ -300,7 +301,7 @@ export default function Dashboard({ result, onReset, onResultUpdate, projectId, 
         </header>
 
         {/* Content */}
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        <main key={safeTab} className="max-w-6xl mx-auto px-4 sm:px-6 py-8 animate-fade-up">
           {safeTab === 'summary'   && <SummaryTab result={result} />}
           {safeTab === 'stories'   && <UserStoriesTab stories={result.userStories} />}
           {safeTab === 'tasks'     && (

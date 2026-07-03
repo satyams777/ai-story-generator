@@ -97,7 +97,7 @@ export default function SummaryTab({ result }: Props) {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-white border border-gray-200 p-6">
+    <div className="rounded-2xl bg-white border border-gray-100 shadow-card p-6">
       <h2 className="text-lg font-semibold text-gray-900 mb-4">{title}</h2>
       {children}
     </div>

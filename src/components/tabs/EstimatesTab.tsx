@@ -84,7 +84,7 @@ export default function EstimatesTab({
       </div>
 
       {/* Breakdown bars */}
-      <div className="rounded-xl bg-white border border-gray-200 p-6">
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-card p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-5">Effort Breakdown</h2>
         <div className="space-y-4">
           {lanes.map((lane) => (
@@ -102,7 +102,7 @@ export default function EstimatesTab({
       </div>
 
       {/* Editable ticket table */}
-      <div className="rounded-xl bg-white border border-gray-200 p-6">
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-gray-900">Ticket Estimates</h2>

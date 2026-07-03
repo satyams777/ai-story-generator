@@ -176,7 +176,7 @@ export default function TasksTab({ tickets, userStories, role, onTicketsChange, 
         )}
 
         {/* Table */}
-        <div className="rounded-xl bg-white border border-gray-200 overflow-hidden">
+        <div className="rounded-2xl bg-white border border-gray-100 shadow-card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
