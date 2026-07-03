@@ -28,9 +28,14 @@ export default function ShareProjectModal({ projectId, onClose }: Props) {
   const [inviteRole, setInviteRole] = useState<Role>('developer');
   const [inviting, setInviting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [linkLoading, setLinkLoading] = useState(true);
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetchMembers();
+    fetchShareLink();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -42,6 +47,43 @@ export default function ShareProjectModal({ projectId, onClose }: Props) {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function fetchShareLink() {
+    setLinkLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/share`);
+      if (res.ok) setShareToken((await res.json()).token);
+    } finally {
+      setLinkLoading(false);
+    }
+  }
+
+  async function handleCreateLink() {
+    setLinkBusy(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/share`, { method: 'POST' });
+      if (res.ok) setShareToken((await res.json()).token);
+    } finally {
+      setLinkBusy(false);
+    }
+  }
+
+  async function handleRevokeLink() {
+    setLinkBusy(true);
+    try {
+      await fetch(`/api/projects/${projectId}/share`, { method: 'DELETE' });
+      setShareToken(null);
+    } finally {
+      setLinkBusy(false);
+    }
+  }
+
+  function handleCopyLink() {
+    if (!shareToken) return;
+    navigator.clipboard.writeText(`${window.location.origin}/share/${shareToken}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   }
 
   async function handleInvite(e: React.FormEvent) {
@@ -122,6 +164,48 @@ export default function ShareProjectModal({ projectId, onClose }: Props) {
             </button>
             <p className="text-xs text-gray-400">They need an existing account with this email.</p>
           </form>
+
+          <div className="border-t border-gray-100 pt-5">
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Public link (no login required)</label>
+            {linkLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : shareToken ? (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/share/${shareToken}`}
+                    className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-500 bg-gray-50"
+                  />
+                  <button
+                    onClick={handleCopyLink}
+                    className="px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors shrink-0"
+                  >
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+                <button
+                  onClick={handleRevokeLink}
+                  disabled={linkBusy}
+                  className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50 transition-colors"
+                >
+                  Revoke link
+                </button>
+                <p className="text-xs text-gray-400">Anyone with this link can view a read-only summary and diagrams — no account needed.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <button
+                  onClick={handleCreateLink}
+                  disabled={linkBusy}
+                  className="w-full py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  {linkBusy ? 'Creating…' : 'Create public link'}
+                </button>
+                <p className="text-xs text-gray-400">Creates a read-only link anyone can open without signing up.</p>
+              </div>
+            )}
+          </div>
 
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">People with access</p>

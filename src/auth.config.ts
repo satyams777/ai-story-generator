@@ -9,7 +9,7 @@ export const authConfig: NextAuthConfig = {
   callbacks: {
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
-      if (PUBLIC_PATHS.includes(pathname)) return true;
+      if (PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/share/')) return true;
       return !!auth?.user;
     },
     jwt({ token, user }) {

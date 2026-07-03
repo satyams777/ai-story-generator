@@ -34,6 +34,10 @@ model Project {
   jiraIssueTypeId   String?
   jiraIssueTypeName String?
 
+  // Public, no-login read-only link. Null = sharing disabled. Grants the same
+  // access as the "stakeholder" role to anyone who has the token.
+  shareToken String? @unique
+
   @@index([userId])
 }
 

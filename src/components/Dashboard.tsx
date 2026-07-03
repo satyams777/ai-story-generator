@@ -63,14 +63,17 @@ interface Props {
   initialHoursPerPoint?: number;
   initialRole?: Role;
   initialJiraTarget?: JiraTarget | null;
+  // True for the unauthenticated /share/[token] view: no session exists, so
+  // anything that calls an authed API (chat, save, share, jira) must be hidden.
+  publicView?: boolean;
 }
 
-export default function Dashboard({ result, onReset, onResultUpdate, projectId, initialHoursPerPoint, initialRole, initialJiraTarget }: Props) {
-  const isOwner = (initialRole ?? 'owner') === 'owner';
+export default function Dashboard({ result, onReset, onResultUpdate, projectId, initialHoursPerPoint, initialRole, initialJiraTarget, publicView }: Props) {
+  const isOwner = !publicView && (initialRole ?? 'owner') === 'owner';
+
+  const role = initialRole ?? 'owner';
 
   const [activeTab, setActiveTab]         = useState<Tab>('summary');
-  const [role, setRole]                   = useState<Role>(initialRole ?? 'owner');
-  const [showRoleMenu, setShowRoleMenu]   = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showJiraModal, setShowJiraModal] = useState(false);
   const [jiraTarget, setJiraTarget]       = useState<JiraTarget | null>(initialJiraTarget ?? null);
@@ -85,16 +88,11 @@ export default function Dashboard({ result, onReset, onResultUpdate, projectId, 
   );
   const liveEstimate = useMemo(() => buildEstimate(tickets, hoursPerPoint), [tickets, hoursPerPoint]);
 
-  const visibleTabs = ALL_TABS.filter((t) => t.roles.includes(role));
+  const visibleTabs = ALL_TABS.filter((t) => t.roles.includes(role) && !(publicView && t.id === 'chat'));
 
   // If current tab is hidden for new role, switch to first visible
   const safeTab = visibleTabs.find((t) => t.id === activeTab)?.id ?? visibleTabs[0]?.id ?? 'summary';
   const activeLabel = visibleTabs.find((t) => t.id === safeTab)?.label ?? 'Summary';
-
-  function switchRole(r: Role) {
-    setRole(r);
-    setShowRoleMenu(false);
-  }
 
   function selectTab(id: Tab) {
     setActiveTab(id);
@@ -162,12 +160,16 @@ export default function Dashboard({ result, onReset, onResultUpdate, projectId, 
           <span className="text-lg">🧠</span>
           <span className="text-sm font-semibold text-gray-900">Project Analysis</span>
         </div>
-        <button
-          onClick={onReset}
-          className="w-full text-left text-sm text-gray-500 hover:text-gray-800 transition-colors flex items-center gap-1.5"
-        >
-          ← My Projects
-        </button>
+        {publicView ? (
+          <p className="text-xs text-gray-400">🔒 Shared read-only view</p>
+        ) : (
+          <button
+            onClick={onReset}
+            className="w-full text-left text-sm text-gray-500 hover:text-gray-800 transition-colors flex items-center gap-1.5"
+          >
+            ← My Projects
+          </button>
+        )}
       </div>
 
       {/* Grouped nav */}
@@ -209,48 +211,10 @@ export default function Dashboard({ result, onReset, onResultUpdate, projectId, 
 
       {/* Role picker + export */}
       <div className="border-t border-gray-100 p-3 space-y-2">
-        {isOwner ? (
-          <div className="relative">
-            <button
-              onClick={() => setShowRoleMenu((v) => !v)}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${activeRoleDef.color}`}
-            >
-              <span>{activeRoleDef.icon}</span>
-              <span className="flex-1 text-left truncate">Preview: {activeRoleDef.label}</span>
-              <svg className="w-3.5 h-3.5 opacity-60" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" />
-              </svg>
-            </button>
-
-            {showRoleMenu && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowRoleMenu(false)} />
-                <div className="absolute left-0 bottom-full mb-1 w-full bg-white rounded-xl border border-gray-200 shadow-lg z-20 overflow-hidden">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 pt-3 pb-1">Preview as…</p>
-                  {ROLE_DEFS.map((rd) => (
-                    <button
-                      key={rd.id}
-                      onClick={() => switchRole(rd.id)}
-                      className={`w-full text-left px-3 py-2.5 flex items-start gap-3 hover:bg-gray-50 transition-colors ${role === rd.id ? 'bg-brand-50' : ''}`}
-                    >
-                      <span className="text-xl shrink-0">{rd.icon}</span>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{rd.label}</p>
-                        <p className="text-xs text-gray-500">{rd.description}</p>
-                      </div>
-                      {role === rd.id && <span className="ml-auto text-brand-600">✓</span>}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium ${activeRoleDef.color}`}>
-            <span>{activeRoleDef.icon}</span>
-            <span className="flex-1 text-left truncate">{activeRoleDef.label}</span>
-          </div>
-        )}
+        <div className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium ${activeRoleDef.color}`}>
+          <span>{activeRoleDef.icon}</span>
+          <span className="flex-1 text-left truncate">{activeRoleDef.label}</span>
+        </div>
 
         {isOwner && projectId && (
           <button
@@ -293,12 +257,14 @@ export default function Dashboard({ result, onReset, onResultUpdate, projectId, 
           <span>Export Report</span>
         </button>
 
-        <button
-          onClick={() => signOut({ callbackUrl: '/login' })}
-          className="w-full px-3 py-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          Sign out
-        </button>
+        {!publicView && (
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            className="w-full px-3 py-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            Sign out
+          </button>
+        )}
       </div>
     </div>
   );

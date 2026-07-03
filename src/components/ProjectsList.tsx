@@ -35,6 +35,12 @@ export default function ProjectsList({ onNewAnalysis, onOpenProject, loadingProj
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // Invited collaborators (pm/developer/stakeholder) only work within projects
+  // an owner shared with them — they can't spin up new ones. A user with zero
+  // projects is still allowed through once, so they can bootstrap their first
+  // project and become its owner.
+  const canCreateNew = !loading && (projects.length === 0 || projects.some((p) => p.role === 'owner'));
+
   useEffect(() => {
     fetchProjects();
   }, []);
@@ -84,13 +90,15 @@ export default function ProjectsList({ onNewAnalysis, onOpenProject, loadingProj
             <h1 className="text-xl font-bold text-gray-900">My Projects</h1>
             <p className="text-sm text-gray-500 mt-0.5">Saved analyses, ready to revisit or keep editing.</p>
           </div>
-          <button
-            onClick={onNewAnalysis}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" /></svg>
-            New Analysis
-          </button>
+          {canCreateNew && (
+            <button
+              onClick={onNewAnalysis}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" /></svg>
+              New Analysis
+            </button>
+          )}
         </div>
 
         {loading ? (
