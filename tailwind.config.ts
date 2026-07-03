@@ -39,6 +39,26 @@ const config: Config = {
           '0%': { opacity: '0', transform: 'translateY(8px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'pop-in': {
+          '0%': { opacity: '0', transform: 'scale(0.92)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'grow-x': {
+          '0%': { transform: 'scaleX(0)' },
+          '100%': { transform: 'scaleX(1)' },
+        },
+        'slide-in-right': {
+          '0%': { opacity: '0', transform: 'translateX(12px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        'slide-in-left': {
+          '0%': { opacity: '0', transform: 'translateX(-12px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
         blob: {
           '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
           '33%': { transform: 'translate(20px, -30px) scale(1.1)' },
@@ -47,6 +67,11 @@ const config: Config = {
       },
       animation: {
         'fade-up': 'fade-up 0.4s ease-out both',
+        'fade-in': 'fade-in 0.3s ease-out both',
+        'pop-in': 'pop-in 0.25s cubic-bezier(0.34,1.56,0.64,1) both',
+        'grow-x': 'grow-x 0.6s cubic-bezier(0.16,1,0.3,1) both',
+        'slide-in-right': 'slide-in-right 0.3s ease-out both',
+        'slide-in-left': 'slide-in-left 0.3s ease-out both',
         blob: 'blob 12s infinite ease-in-out',
       },
     },
