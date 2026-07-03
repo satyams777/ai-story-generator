@@ -56,6 +56,8 @@ export interface Ticket {
   status?: TicketStatus;
   sprint?: number;
   milestoneId?: string;
+  jiraKey?: string;
+  jiraUrl?: string;
 }
 
 export interface Estimate {

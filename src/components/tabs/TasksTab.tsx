@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { Ticket, TicketType, UserStory, MoSCoW, Role } from '@/types/analysis';
 import TicketModal from '@/components/TicketModal';
 import TicketFormModal, { type TicketFormValues } from '@/components/TicketFormModal';
+import type { JiraTarget } from '@/components/JiraModal';
 
 const TYPE_STYLES: Record<TicketType, string> = {
   Frontend: 'bg-blue-100 text-blue-700',
@@ -19,11 +20,15 @@ const MOSCOW_STYLES: Record<MoSCoW, string> = {
   Wont:   'bg-gray-100 text-gray-500',
 };
 
+interface PushResult { ticketId: string; ok: boolean; jiraKey?: string; jiraUrl?: string; error?: string; }
+
 interface Props {
   tickets: Ticket[];
   userStories: UserStory[];
   role?: Role;
   onTicketsChange?: (tickets: Ticket[]) => void;
+  jiraTarget?: JiraTarget | null;
+  onPushToJira?: (ticketIds: string[]) => Promise<PushResult[]>;
 }
 
 type Filter = TicketType | 'All';
@@ -35,7 +40,7 @@ function nextId(tickets: Ticket[]): string {
 
 const EMPTY_FORM: TicketFormValues = { title: '', description: '', checklist: [], type: 'Frontend', storyId: '', moscow: 'Should', effortPoints: 3 };
 
-export default function TasksTab({ tickets, userStories, role, onTicketsChange }: Props) {
+export default function TasksTab({ tickets, userStories, role, onTicketsChange, jiraTarget, onPushToJira }: Props) {
   const canEdit = role === 'owner' && !!onTicketsChange;
 
   const [filter, setFilter]         = useState<Filter>('All');
@@ -43,6 +48,8 @@ export default function TasksTab({ tickets, userStories, role, onTicketsChange }
   const [formMode, setFormMode]     = useState<'add' | 'edit' | null>(null);
   const [formTicket, setFormTicket] = useState<Ticket | null>(null);
   const [deleteId, setDeleteId]     = useState<string | null>(null);
+  const [pushing, setPushing]       = useState(false);
+  const [pushSummary, setPushSummary] = useState<{ success: number; failed: number } | null>(null);
 
   const types: Filter[] = ['All', 'Frontend', 'Backend', 'QA', 'DevOps'];
   const visible = filter === 'All' ? tickets : tickets.filter((t) => t.type === filter);
@@ -94,6 +101,24 @@ export default function TasksTab({ tickets, userStories, role, onTicketsChange }
     setDeleteId(null);
   }
 
+  /* ── push to jira ── */
+  const unpushedVisible = visible.filter((t) => !t.jiraKey);
+
+  async function handlePush() {
+    if (!onPushToJira || unpushedVisible.length === 0 || pushing) return;
+    setPushing(true);
+    setPushSummary(null);
+    try {
+      const results = await onPushToJira(unpushedVisible.map((t) => t.id));
+      const success = results.filter((r) => r.ok).length;
+      setPushSummary({ success, failed: results.length - success });
+    } catch {
+      setPushSummary({ success: 0, failed: unpushedVisible.length });
+    } finally {
+      setPushing(false);
+    }
+  }
+
   return (
     <>
       <div className="space-y-4">
@@ -118,16 +143,37 @@ export default function TasksTab({ tickets, userStories, role, onTicketsChange }
             ))}
           </div>
 
-          {canEdit && (
-            <button
-              onClick={openAdd}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" /></svg>
-              Add Ticket
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {canEdit && jiraTarget && onPushToJira && (
+              <button
+                onClick={handlePush}
+                disabled={pushing || unpushedVisible.length === 0}
+                title={unpushedVisible.length === 0 ? 'All visible tickets are already pushed' : undefined}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                <span>🔗</span>
+                {pushing ? 'Pushing…' : `Push to Jira${unpushedVisible.length > 0 ? ` (${unpushedVisible.length})` : ''}`}
+              </button>
+            )}
+
+            {canEdit && (
+              <button
+                onClick={openAdd}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" /></svg>
+                Add Ticket
+              </button>
+            )}
+          </div>
         </div>
+
+        {pushSummary && (
+          <div className={`rounded-lg border p-3 text-sm ${pushSummary.failed > 0 ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-green-50 border-green-200 text-green-700'}`}>
+            Pushed {pushSummary.success} ticket{pushSummary.success === 1 ? '' : 's'} to Jira
+            {pushSummary.failed > 0 && ` · ${pushSummary.failed} failed`}
+          </div>
+        )}
 
         {/* Table */}
         <div className="rounded-xl bg-white border border-gray-200 overflow-hidden">
@@ -141,6 +187,7 @@ export default function TasksTab({ tickets, userStories, role, onTicketsChange }
                 <th className="text-left px-4 py-3 font-medium text-gray-500 w-24">MoSCoW</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-500 w-20">Pts</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-500 w-20">Hours</th>
+                {jiraTarget && <th className="text-left px-4 py-3 font-medium text-gray-500 w-24">Jira</th>}
                 {canEdit && <th className="w-20" />}
               </tr>
             </thead>
@@ -169,6 +216,23 @@ export default function TasksTab({ tickets, userStories, role, onTicketsChange }
                   </td>
                   <td className="px-4 py-3 text-right text-gray-700">{ticket.effortPoints}</td>
                   <td className="px-4 py-3 text-right text-gray-700">{ticket.hours}h</td>
+                  {jiraTarget && (
+                    <td className="px-4 py-3">
+                      {ticket.jiraKey ? (
+                        <a
+                          href={ticket.jiraUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                        >
+                          {ticket.jiraKey} ↗
+                        </a>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </td>
+                  )}
                   {canEdit && (
                     <td className="px-4 py-3">
                       <div className="flex gap-1.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">

@@ -47,3 +47,7 @@ yarn-error.log*
 .cache/
 *.pem
 .turbo/
+
+# Local database
+prisma/*.db
+prisma/*.db-journal

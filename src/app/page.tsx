@@ -1,19 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import type { AnalysisResult } from '@/types/analysis';
+import type { AnalysisResult, Role } from '@/types/analysis';
 import FileUpload from '@/components/FileUpload';
 import Dashboard from '@/components/Dashboard';
+import ProjectsList from '@/components/ProjectsList';
 import { INDUSTRY_TEMPLATES } from '@/lib/templates';
+import type { JiraTarget } from '@/components/JiraModal';
 
-type Status = 'idle' | 'loading' | 'done' | 'error';
+type Status = 'projects' | 'idle' | 'loading' | 'done' | 'error';
 
 export default function Home() {
-  const [status, setStatus]           = useState<Status>('idle');
+  const [status, setStatus]           = useState<Status>('projects');
   const [result, setResult]           = useState<AnalysisResult | null>(null);
+  const [projectId, setProjectId]     = useState<string | null>(null);
+  const [projectRole, setProjectRole] = useState<Role>('owner');
+  const [jiraTarget, setJiraTarget]   = useState<JiraTarget | null>(null);
+  const [hoursPerPoint, setHoursPerPoint] = useState(4);
   const [error, setError]             = useState<string | null>(null);
   const [templateText, setTemplateText] = useState('');
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
+  const [openingProjectId, setOpeningProjectId] = useState<string | null>(null);
 
   async function handleSubmit(formData: FormData) {
     setStatus('loading');
@@ -22,7 +29,20 @@ export default function Home() {
       const res = await fetch('/api/analyze', { method: 'POST', body: formData });
       const data = (await res.json()) as AnalysisResult & { error?: string };
       if (!res.ok) throw new Error(data.error ?? 'Analysis failed');
+
+      // Auto-save the freshly analyzed project so it survives a refresh.
+      const saveRes = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result: data, hoursPerPoint: 4 }),
+      });
+      const saved = await saveRes.json();
+
       setResult(data);
+      setProjectId(saveRes.ok ? saved.id : null);
+      setProjectRole('owner');
+      setJiraTarget(null);
+      setHoursPerPoint(4);
       setStatus('done');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -30,9 +50,39 @@ export default function Home() {
     }
   }
 
+  async function handleOpenProject(id: string) {
+    setOpeningProjectId(id);
+    try {
+      const res = await fetch(`/api/projects/${id}`);
+      if (!res.ok) throw new Error('Could not load project');
+      const data = await res.json();
+      setResult(data.result);
+      setHoursPerPoint(data.hoursPerPoint ?? 4);
+      setProjectId(data.id);
+      setProjectRole((data.role as Role) ?? 'stakeholder');
+      setJiraTarget(data.jiraTarget ?? null);
+      setStatus('done');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load project');
+      setStatus('error');
+    } finally {
+      setOpeningProjectId(null);
+    }
+  }
+
   function handleReset() {
-    setStatus('idle');
+    setStatus('projects');
     setResult(null);
+    setProjectId(null);
+    setProjectRole('owner');
+    setJiraTarget(null);
+    setError(null);
+    setTemplateText('');
+    setActiveTemplate(null);
+  }
+
+  function handleNewAnalysis() {
+    setStatus('idle');
     setError(null);
     setTemplateText('');
     setActiveTemplate(null);
@@ -47,8 +97,28 @@ export default function Home() {
     setTemplateText(text);
   }
 
+  if (status === 'projects') {
+    return (
+      <ProjectsList
+        onNewAnalysis={handleNewAnalysis}
+        onOpenProject={handleOpenProject}
+        loadingProjectId={openingProjectId}
+      />
+    );
+  }
+
   if (status === 'done' && result) {
-    return <Dashboard result={result} onReset={handleReset} onResultUpdate={handleResultUpdate} />;
+    return (
+      <Dashboard
+        result={result}
+        onReset={handleReset}
+        onResultUpdate={handleResultUpdate}
+        projectId={projectId}
+        initialHoursPerPoint={hoursPerPoint}
+        initialRole={projectRole}
+        initialJiraTarget={jiraTarget}
+      />
+    );
   }
 
   return (
@@ -56,6 +126,12 @@ export default function Home() {
       <div className="w-full max-w-2xl">
         {/* Hero */}
         <div className="text-center mb-10">
+          <button
+            onClick={handleReset}
+            className="mb-4 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            ← Back to My Projects
+          </button>
           <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-full px-4 py-1.5 text-sm font-medium text-brand-600 mb-4">
             <span>✨</span> AI-powered project planning
           </div>

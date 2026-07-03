@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { MODEL } from '@/lib/gemini';
+import { auth } from '@/auth';
+import { getMembership } from '@/lib/permissions';
 
 type Section =
   | 'summary'
@@ -28,16 +30,29 @@ const SECTION_SCHEMAS: Record<Section, string> = {
 };
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
-    const { section, instruction, currentContent, projectSummary } = (await req.json()) as {
+    const { section, instruction, currentContent, projectSummary, projectId } = (await req.json()) as {
       section: Section;
       instruction: string;
       currentContent: unknown;
       projectSummary: string;
+      projectId: string;
     };
 
     if (!section || !instruction?.trim()) {
       return NextResponse.json({ error: 'section and instruction are required' }, { status: 400 });
+    }
+    if (!projectId) {
+      return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+    }
+
+    const membership = await getMembership(projectId, session.user.id);
+    if (!membership) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    if (membership.role !== 'owner') {
+      return NextResponse.json({ error: 'Only the project owner can refine sections with AI' }, { status: 403 });
     }
 
     const client = getClient();

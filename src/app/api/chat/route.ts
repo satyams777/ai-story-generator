@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import type { ChatMessage } from '@/types/analysis';
 import { MODEL } from '@/lib/gemini';
+import { auth } from '@/auth';
 
 function getClient() {
   const key = process.env.GROQ_API_KEY;
@@ -10,6 +11,9 @@ function getClient() {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { message, history, systemContext } = (await req.json()) as {
       message: string;

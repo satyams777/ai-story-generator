@@ -31,10 +31,11 @@ interface RefinementEntry {
 
 interface Props {
   result: AnalysisResult;
+  projectId: string;
   onSectionUpdate: (section: Section, data: unknown) => void;
 }
 
-export default function RefinementTab({ result, onSectionUpdate }: Props) {
+export default function RefinementTab({ result, projectId, onSectionUpdate }: Props) {
   const [section, setSection] = useState<Section>('summary');
   const [instruction, setInstruction] = useState('');
   const [loading, setLoading] = useState(false);
@@ -59,6 +60,7 @@ export default function RefinementTab({ result, onSectionUpdate }: Props) {
           instruction: instruction.trim(),
           currentContent: result[section],
           projectSummary: result.summary.slice(0, 600),
+          projectId,
         }),
       });
 

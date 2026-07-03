@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { signOut } from 'next-auth/react';
 import type { AnalysisResult, Ticket, Estimate, Role } from '@/types/analysis';
 import SummaryTab from '@/components/tabs/SummaryTab';
 import UserStoriesTab from '@/components/tabs/UserStoriesTab';
@@ -10,6 +11,8 @@ import DiagramsTab from '@/components/tabs/DiagramsTab';
 import ChatTab from '@/components/tabs/ChatTab';
 import SprintTab from '@/components/tabs/SprintTab';
 import RefinementTab from '@/components/tabs/RefinementTab';
+import ShareProjectModal from '@/components/ShareProjectModal';
+import JiraModal, { type JiraTarget } from '@/components/JiraModal';
 
 type Tab = 'summary' | 'stories' | 'tasks' | 'estimates' | 'sprint' | 'team' | 'diagrams' | 'refine' | 'chat';
 type Group = 'Plan' | 'Build' | 'AI Tools';
@@ -50,19 +53,31 @@ function buildEstimate(tickets: Ticket[], hpp: number): Estimate {
   return { totalHours, totalPoints, timelineWeeks: Math.ceil(totalHours / WEEKLY_CAPACITY), breakdown };
 }
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
 interface Props {
   result: AnalysisResult;
   onReset: () => void;
   onResultUpdate: (updated: AnalysisResult) => void;
+  projectId?: string | null;
+  initialHoursPerPoint?: number;
+  initialRole?: Role;
+  initialJiraTarget?: JiraTarget | null;
 }
 
-export default function Dashboard({ result, onReset, onResultUpdate }: Props) {
+export default function Dashboard({ result, onReset, onResultUpdate, projectId, initialHoursPerPoint, initialRole, initialJiraTarget }: Props) {
+  const isOwner = (initialRole ?? 'owner') === 'owner';
+
   const [activeTab, setActiveTab]         = useState<Tab>('summary');
-  const [role, setRole]                   = useState<Role>('owner');
+  const [role, setRole]                   = useState<Role>(initialRole ?? 'owner');
   const [showRoleMenu, setShowRoleMenu]   = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showJiraModal, setShowJiraModal] = useState(false);
+  const [jiraTarget, setJiraTarget]       = useState<JiraTarget | null>(initialJiraTarget ?? null);
   const [mobileNav, setMobileNav]         = useState(false);
   const [tickets, setTickets]             = useState<Ticket[]>(result.tickets.map((t) => ({ ...t })));
-  const [hoursPerPoint, setHoursPerPoint] = useState(4);
+  const [hoursPerPoint, setHoursPerPoint] = useState(initialHoursPerPoint ?? 4);
+  const [saveStatus, setSaveStatus]       = useState<SaveStatus>('idle');
 
   const liveTickets = useMemo(
     () => tickets.map((t) => ({ ...t, hours: t.effortPoints * hoursPerPoint })),
@@ -99,11 +114,49 @@ export default function Dashboard({ result, onReset, onResultUpdate }: Props) {
     onResultUpdate({ ...result, [section]: data });
   }
 
+  async function handleSave() {
+    if (!projectId) return;
+    setSaveStatus('saving');
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          result: { ...result, tickets: liveTickets, estimate: liveEstimate },
+          hoursPerPoint,
+        }),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch {
+      setSaveStatus('error');
+    }
+  }
+
+  async function handlePushToJira(ticketIds: string[]) {
+    if (!projectId) return [];
+    const res = await fetch('/api/jira/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appProjectId: projectId, ticketIds }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? 'Push to Jira failed');
+
+    const results = data.results as { ticketId: string; ok: boolean; jiraKey?: string; jiraUrl?: string; error?: string }[];
+    setTickets((prev) => prev.map((t) => {
+      const r = results.find((res) => res.ticketId === t.id);
+      return r?.ok ? { ...t, jiraKey: r.jiraKey, jiraUrl: r.jiraUrl } : t;
+    }));
+    return results;
+  }
+
   const activeRoleDef = ROLE_DEFS.find((r) => r.id === role)!;
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      {/* Brand + New analysis */}
+      {/* Brand + My projects */}
       <div className="px-4 py-4 border-b border-gray-100">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-lg">🧠</span>
@@ -113,7 +166,7 @@ export default function Dashboard({ result, onReset, onResultUpdate }: Props) {
           onClick={onReset}
           className="w-full text-left text-sm text-gray-500 hover:text-gray-800 transition-colors flex items-center gap-1.5"
         >
-          ← New Analysis
+          ← My Projects
         </button>
       </div>
 
@@ -156,41 +209,81 @@ export default function Dashboard({ result, onReset, onResultUpdate }: Props) {
 
       {/* Role picker + export */}
       <div className="border-t border-gray-100 p-3 space-y-2">
-        <div className="relative">
-          <button
-            onClick={() => setShowRoleMenu((v) => !v)}
-            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${activeRoleDef.color}`}
-          >
+        {isOwner ? (
+          <div className="relative">
+            <button
+              onClick={() => setShowRoleMenu((v) => !v)}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${activeRoleDef.color}`}
+            >
+              <span>{activeRoleDef.icon}</span>
+              <span className="flex-1 text-left truncate">Preview: {activeRoleDef.label}</span>
+              <svg className="w-3.5 h-3.5 opacity-60" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" />
+              </svg>
+            </button>
+
+            {showRoleMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowRoleMenu(false)} />
+                <div className="absolute left-0 bottom-full mb-1 w-full bg-white rounded-xl border border-gray-200 shadow-lg z-20 overflow-hidden">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 pt-3 pb-1">Preview as…</p>
+                  {ROLE_DEFS.map((rd) => (
+                    <button
+                      key={rd.id}
+                      onClick={() => switchRole(rd.id)}
+                      className={`w-full text-left px-3 py-2.5 flex items-start gap-3 hover:bg-gray-50 transition-colors ${role === rd.id ? 'bg-brand-50' : ''}`}
+                    >
+                      <span className="text-xl shrink-0">{rd.icon}</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{rd.label}</p>
+                        <p className="text-xs text-gray-500">{rd.description}</p>
+                      </div>
+                      {role === rd.id && <span className="ml-auto text-brand-600">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium ${activeRoleDef.color}`}>
             <span>{activeRoleDef.icon}</span>
             <span className="flex-1 text-left truncate">{activeRoleDef.label}</span>
-            <svg className="w-3.5 h-3.5 opacity-60" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" />
-            </svg>
-          </button>
+          </div>
+        )}
 
-          {showRoleMenu && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setShowRoleMenu(false)} />
-              <div className="absolute left-0 bottom-full mb-1 w-full bg-white rounded-xl border border-gray-200 shadow-lg z-20 overflow-hidden">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 pt-3 pb-1">Switch Role</p>
-                {ROLE_DEFS.map((rd) => (
-                  <button
-                    key={rd.id}
-                    onClick={() => switchRole(rd.id)}
-                    className={`w-full text-left px-3 py-2.5 flex items-start gap-3 hover:bg-gray-50 transition-colors ${role === rd.id ? 'bg-brand-50' : ''}`}
-                  >
-                    <span className="text-xl shrink-0">{rd.icon}</span>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{rd.label}</p>
-                      <p className="text-xs text-gray-500">{rd.description}</p>
-                    </div>
-                    {role === rd.id && <span className="ml-auto text-brand-600">✓</span>}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        {isOwner && projectId && (
+          <button
+            onClick={() => setShowShareModal(true)}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
+          >
+            <span>👥</span>
+            <span>Share Project</span>
+          </button>
+        )}
+
+        {isOwner && projectId && (
+          <button
+            onClick={() => setShowJiraModal(true)}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
+          >
+            <span>🔗</span>
+            <span>{jiraTarget ? `Jira: ${jiraTarget.jiraProjectKey}` : 'Connect Jira'}</span>
+          </button>
+        )}
+
+        {projectId && role !== 'stakeholder' && (
+          <button
+            onClick={handleSave}
+            disabled={saveStatus === 'saving'}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5"
+          >
+            <span>{saveStatus === 'saved' ? '✅' : '💾'}</span>
+            <span>
+              {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Retry save' : 'Save Changes'}
+            </span>
+          </button>
+        )}
 
         <button
           onClick={handleExport}
@@ -198,6 +291,13 @@ export default function Dashboard({ result, onReset, onResultUpdate }: Props) {
         >
           <span>📄</span>
           <span>Export Report</span>
+        </button>
+
+        <button
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          className="w-full px-3 py-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          Sign out
         </button>
       </div>
     </div>
@@ -243,6 +343,8 @@ export default function Dashboard({ result, onReset, onResultUpdate }: Props) {
               userStories={result.userStories}
               role={role}
               onTicketsChange={setTickets}
+              jiraTarget={jiraTarget}
+              onPushToJira={projectId ? handlePushToJira : undefined}
             />
           )}
           {safeTab === 'estimates' && (
@@ -271,15 +373,29 @@ export default function Dashboard({ result, onReset, onResultUpdate }: Props) {
               hoursPerPoint={hoursPerPoint}
             />
           )}
-          {safeTab === 'refine'    && (
+          {safeTab === 'refine' && projectId && (
             <RefinementTab
               result={result}
+              projectId={projectId}
               onSectionUpdate={handleSectionUpdate}
             />
           )}
           {safeTab === 'chat'      && <ChatTab result={result} />}
         </main>
       </div>
+
+      {showShareModal && projectId && (
+        <ShareProjectModal projectId={projectId} onClose={() => setShowShareModal(false)} />
+      )}
+
+      {showJiraModal && projectId && (
+        <JiraModal
+          projectId={projectId}
+          currentTarget={jiraTarget}
+          onTargetChange={setJiraTarget}
+          onClose={() => setShowJiraModal(false)}
+        />
+      )}
     </div>
   );
 }
